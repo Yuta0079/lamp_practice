@@ -5,7 +5,11 @@ require_once MODEL_PATH . 'user.php';
 require_once MODEL_PATH . 'item.php';
 
 session_start();
-
+$token = get_post('token');
+if(is_valid_csrf_token($token) === false){
+  set_error('不正な処理です');
+  redirect_to(LOGIN_URL);
+}
 if(is_logined() === false){
   redirect_to(LOGIN_URL);
 }
@@ -17,10 +21,10 @@ $user = get_login_user($db);
 if(is_admin($user) === false){
   redirect_to(LOGIN_URL);
 }
-
+//itemid・在庫を取得
 $item_id = get_post('item_id');
 $stock = get_post('stock');
-
+//在庫数更新処理
 if(update_item_stock($db, $item_id, $stock)){
   set_message('在庫数を変更しました。');
 } else {
