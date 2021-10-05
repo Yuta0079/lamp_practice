@@ -105,6 +105,10 @@ function purchase_carts($db, $carts){
   if(validate_cart_purchase($carts) === false){
     return false;
   }
+ // トランザクション開始
+ $db->beginTransaction();
+  insert_order($db, $carts[0]['user_id']);
+  $order_id = $db->lastInsertId();
   foreach($carts as $cart){
     if(update_item_stock(
         $db, 
@@ -113,9 +117,16 @@ function purchase_carts($db, $carts){
       ) === false){
       set_error($cart['name'] . 'の購入に失敗しました。');
     }
+    insert_order_detail($db, $order_id , $cart['price'] , $cart['item_id'] , $cart['amount']);
   }
-  
   delete_user_carts($db, $carts[0]['user_id']);
+ //トランザクション終了
+ if(has_error() === false){
+   $db->commit();
+ }else{
+   $db->rollback();
+   return false;  
+ }
 }
 
 function delete_user_carts($db, $user_id){
@@ -157,3 +168,24 @@ function validate_cart_purchase($carts){
   return true;
 }
 
+function insert_order($db, $user_id){
+  $sql = "
+    INSERT INTO
+      orders(order_date , user_id)
+    VALUES
+    (NOW() , ?)
+  ";
+  
+  return execute_query($db, $sql,array($user_id));
+}
+
+function insert_order_detail($db, $order_id , $price , $item_id , $amount){
+  $sql = "
+    INSERT INTO
+      order_details(order_id , price , item_id , amount)
+    VALUES
+    (? , ? , ? , ?)
+  ";
+  
+  return execute_query($db, $sql,array($order_id , $price , $item_id , $amount));
+}
