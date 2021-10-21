@@ -16,10 +16,10 @@ function get_item($db, $item_id){
     FROM
       items
     WHERE
-      item_id = {$item_id}
+      item_id = ?
   ";
 
-  return fetch_query($db, $sql);
+  return fetch_query($db, $sql ,array($item_id));
 }
 
 function get_items($db, $is_open = false){
@@ -205,4 +205,33 @@ function is_valid_item_status($status){
     $is_valid = false;
   }
   return $is_valid;
+}
+
+function get_rank($db){
+  $sql = "
+    SELECT
+      items.item_id, 
+      items.name,
+      items.stock,
+      items.price,
+      items.image,
+      items.status,
+      SUM(order_details.amount) AS total
+    FROM
+      items
+    JOIN
+      order_details
+    ON
+      order_details.item_id = items.item_id
+    WHERE 
+      status = 1
+    GROUP BY
+      order_details.item_id
+    ORDER BY
+      total
+      DESC
+    LIMIT 3
+    ";
+
+  return fetch_all_query($db, $sql);
 }
